@@ -1,0 +1,187 @@
+<html ng-app="trabalhoEstatistica">
+<head>
+	<title>Exercicio Nanci</title>
+		<script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.js"></script>
+<!-- Highcharts -->
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+	<style>
+		.jumbotron{
+			width : 400px;
+			text-align : center;
+			margin-right: auto;
+			margin-left:auto;
+			margin-top: 20px;
+		}
+
+		.table{
+			margin-top: 20px;
+		}
+
+		.form-control{
+			margin-bottom:5px;
+		}
+	</style>
+	<script>
+		angular.module("trabalhoEstatistica",[]);
+		angular.module("trabalhoEstatistica").controller("trabalhoEstatisticaCtrl", function ($scope){
+			$scope.app = "Trabalho de Estatistica";
+			$scope.dados = [];
+			//Evitar ler o $scope dentro do controller.
+			$scope.adicionarDado = function(info){
+				$scope.dados.push(angular.copy(info));
+
+		};
+
+		$scope.enviarInfos = function(){
+			var x = new Array();
+			var y = new Array();
+			for(var i = 0; i < $scope.dados.length; i++)
+			{
+				x[i] = $scope.dados[i].rotulo;
+				y[i] = $scope.dados[i].info;
+			}
+			criarGrafico(x,y);	
+		}
+	});
+
+	function criarGrafico(x,y)
+	{
+		var mat = new Object();
+		mat.x = x
+		mat.y = y;
+		mat.x2 = new Array();
+		mat.y2 = new Array();
+		mat.xy = new Array();
+
+		for(var i = 0; i < mat.x.length; i++){
+			mat.x2[i] = (i + 1) * (i + 1);
+			mat.y2[i] = mat.y[i]* mat.y[i];
+			mat.xy[i] = (i + 1)* mat.y[i];
+		}
+		var aux = new Object();
+		aux.eX = somarArray2(mat.x);
+		aux.eY = somarArray(mat.y);
+		aux.eX2 = somarArray(mat.x2);
+		aux.eY2 = somarArray(mat.y2);
+		aux.eXY = somarArray(mat.xy);
+		mat.results = aux;
+		console.log(mat);
+		mat.final = equacaoReta(mat);
+
+		var serieData = new Object();
+		serieData.name = "Dados"
+		serieData.data = y;
+		serieData.type = 'column';
+
+		var arrTendencia = new Array();
+		for(var m = 0; m < x.length; m++)
+			arrTendencia[m] = (mat.final.a * (m+1)) + mat.final.b;
+		var serieTendencia = new Object();
+		serieTendencia.name = "Tendencia";
+		serieTendencia.data = arrTendencia;
+		serieTendencia.type = 'spline';
+
+		showGraph(serieData,serieTendencia, x);
+	} 
+
+	function equacaoReta(mat) {
+		var retorno = new Object();
+		var a1 = (mat.x.length) * (mat.results.eXY) - (mat.results.eX) * (mat.results.eY);
+		var a2 = (mat.x.length) * (mat.results.eX2)  - (mat.results.eX * mat.results.eX);
+		retorno.a = a1 /a2; 
+		a1 =  mat.results.eY - (retorno.a) * (mat.results.eX);
+		a2 =  mat.x.length;
+		retorno.b = a1 /  a2;
+		console.log(retorno);
+		return retorno;
+	}
+
+	function somarArray(array) {
+		var result = 0;
+		for(var i = 0; i < array.length; i++)
+			result += array[i];
+		return result;
+	}
+
+	function somarArray2(array) {
+		var result = 0;
+		for(var i = 0; i < array.length; i++)
+			result += (i+1);
+		return result;
+	}
+
+	function showGraph(serie,tendencia, categorias){
+		$("#form").fadeOut();
+		$('#container').highcharts({
+			title: {
+				//text: grafico.nome,
+				text: "Exercicio Estatistica",
+				x: -20 //center
+			},
+			subtitle: {
+				text: 'Source: WorldClimate.com',
+				x: -20
+			},
+			xAxis: {
+				categories: categorias
+			},
+			yAxis: {
+				title: {
+					//text: grafico.title
+					text: "Exemplo"
+				},
+				plotLines: [{
+					value: 0,
+					width: 1,
+					color: '#808080'
+				}]
+			},
+			/*tooltip: {
+				valueSuffix: '°C'
+			},*/
+			legend: {
+				layout: 'vertical',
+				align: 'right',
+				verticalAlign: 'middle',
+				borderWidth: 0
+			},
+			series: [serie,tendencia]
+		});
+	}
+	</script>
+</head>
+<body ng-controller="trabalhoEstatisticaCtrl">
+	<div class="jumbotron" id = "form">
+		<h3>{{app}}</h4>
+		<table class="table table-striped">
+			<tr>
+				<th>Rotulo</th>
+				<th>Dado</th>
+			</tr>
+			<tr ng-repeat="dado in dados">
+				<td>{{dado.rotulo}}</td>
+				<td>{{dado.info}}</td>
+				<!--<td ng-repeat="(key, value) in contato">
+				{{value}}-->
+				</td>
+		</table>
+		<hr/>
+		<input class="form-control" placeholder="Rotulo" type="text" ng-model="dado.rotulo"/>
+		<input class="form-control" placeholder="Dado" type="number"  ng-model="dado.info"/>
+		<input class="btn btn-primary btn-block" type="submit" ng-click="adicionarDado(dado)" value="Adicionar Informacao" ng-disabled="!dado.rotulo || !dado.info"/>
+		<input class="btn btn-primary btn-block" type="button" ng-click="enviarInfos();"  value="Montar Grafico"/>
+	</div>
+
+	<div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+
+	<div id="atualizar">
+		<input class="btn btn-primary btn-block" type="button" onclick='document.location.reload()'  value="Recomecar"/>
+	</div>
+</body>
+	
+</body>
+</html>
